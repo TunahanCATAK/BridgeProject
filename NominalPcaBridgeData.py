@@ -46,25 +46,13 @@ def PlotCostValues(cost, test_cost):
 
 
 
-
 """
-preprocessing steps:
-1 - reading data from csv file to panda array
-2 - format of Zaman column should be converted. 
-3 - Kontr, Zon, Renk, Hedef columns represent data in string format, it should be converted to integers.
-4 - Sonuc column has to be normalized
-5 - Label encoding
-6 - Normalization of all data
-7 - seperate X,Y and test train data
-"""
-
-"""
-1st step
+1st step : Read Data from a csv file.
 """
 data = pd.read_csv('SampleData.csv', encoding='iso-8859-9')
 
 """
-2nd step
+2nd step : Convert DateTime to a numeric format.
 """
 hours = pd.to_datetime(data['Zaman'], format='%H:%M').dt.hour
 minutes = pd.to_datetime(data['Zaman'], format='%H:%M').dt.minute
@@ -75,64 +63,33 @@ data['Zaman'] = (hours - 8) * 100 + minutes
 data['Zaman'] = data['Zaman'].apply(lambda x : 0 if x < 230 else ( 1 if (x > 230 and x < 400)  else  2))
 
 """
-3rd step
+3rd step : Seperate X and y.
 """
-dictionary = {'Var': 1, 'Yok': 0, 'Sür': 2}
-data['Kontr'] = data['Kontr'].map(dictionary)
-
-
-dictionary = {'Var': 1, 'Yok': 0}
-data['Zon'] = data['Zon'].map(dictionary)
-
-dictionary = {'Maça': 4, 'Kupa': 3, 'Karo': 2, 'Sinek' : 1, 'Kozsuz' : 5}
-data['Renk'] = data['Renk'].map(dictionary)
-
-dictionary = {'Zon': 1, 'Partial': 0}
-data['Hedef'] = data['Hedef'].map(dictionary)
-
-"""
-4st step
-"""
-data['Sonuc'] = data['Sonuc'].apply(lambda x : 0 if x < 0 else 1)
-
-
-"""
-5st step
-"""
-print(data.head())
-
-le = LabelEncoder()
-
-for col in data.columns.values:
-       # Encoding only categorical variables
-       if data[col].dtypes == 'object':
-        le.fit(data[col].values)
-        data[col] = le.transform(data[col])
-
-print(data.head())
-
-"""
-7st step
-"""
-X = pd.DataFrame(data.iloc[:,0:10].values)
+X = pd.DataFrame(data.iloc[:,0:11].values)
 y = pd.DataFrame(data.iloc[:,11].values)
+X.columns = ['Zaman', 'Takim', 'Oyuncu', 'Puan', 'Dagilim', 'Zon', 'Kontrat', 'Renk', 'Kontr', 'Hedef', 'Sonuc']
+"""
+4st step : Convert Nominal data.
+"""
+X = pd.get_dummies(X, columns=['Takim', 'Oyuncu', 'Zon', 'Renk', 'Kontr', 'Hedef'])
 
 """
-6st step
+5st step : Normalize X
 """
-scaler = MinMaxScaler()
-X = scaler.fit_transform(X)
+from sklearn.preprocessing import MinMaxScaler
+mms = MinMaxScaler()
+X = mms.fit_transform(X)
 
-print(X)
+count = 27
 
 
 """
 PCA Implementation
 """
-variance_rat = np.zeros(10)
+variance_rat = np.zeros(count-1)
 explained_count = 0;
 
-for i in range(2,10):
+for i in range(2,count-1):
     sklearn_pca = sklearnPCA(n_components=i)
     fit_results = sklearn_pca.fit(X)
     transform_results = sklearn_pca.transform(X)
@@ -155,7 +112,7 @@ from sklearn.model_selection import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(transform_results, y, test_size=0.3, random_state=0)
 
 theta = np.zeros([1,explained_count])
-theta, cost, test_cost = GradientDescent(X_train, y_train, theta, 0.001, 120, X_test, y_test)
+theta, cost, test_cost = GradientDescent(X_train, y_train, theta, 0.001, 250, X_test, y_test)
 print(theta)
 print(ComputeCost(X_test, y_test, theta))
 
